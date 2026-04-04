@@ -1,38 +1,53 @@
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
+import { extractJsonObject } from "@/lib/ai/extract-json";
 
-const mealSchema = z.object({
+const mealResultSchema = z.object({
   meals: z.array(
     z.object({
-      description: z
-        .string()
-        .describe("Short description of the meal as written by the user"),
+      description: z.string(),
       items: z.array(
         z.object({
-          name: z.string().describe("Food item name"),
-          quantity: z.string().describe("Amount/portion, e.g. '100g', '1 cup'"),
-          calories: z.number().describe("Estimated calories (kcal)"),
-          protein: z.number().describe("Estimated protein in grams"),
-          carbs: z.number().describe("Estimated carbs in grams"),
-          fat: z.number().describe("Estimated fat in grams"),
+          name: z.string(),
+          quantity: z.string(),
+          calories: z.coerce.number(),
+          protein: z.coerce.number(),
+          carbs: z.coerce.number(),
+          fat: z.coerce.number(),
         })
       ),
     })
   ),
 });
 
-export type ParsedMeal = z.infer<typeof mealSchema>["meals"][number];
+export type ParsedMeal = z.infer<typeof mealResultSchema>["meals"][number];
 
 export async function parseMeals(rawText: string) {
-  const { object } = await generateObject({
+  const { text } = await generateText({
     model: openai("gpt-4o-mini"),
-    schema: mealSchema,
-    prompt: `Parse the following food/diet notes into structured meal data. Each line or sentence describes a meal or food intake. Estimate the nutritional information (calories, protein, carbs, fat) based on your knowledge. Be accurate for common foods including Indian cuisine (dal, roti, rajma, rice, sabzi, etc.).
+    prompt: `Parse food/diet notes into structured meals. The user may write in any casual format (lines, prose, lists). Estimate calories, protein (g), carbs (g), fat (g) per line item; be reasonable for Indian and international foods.
+
+Output ONLY one JSON object, no markdown, no commentary.
+Shape: {"meals":[{"description":"string","items":[{"name":"string","quantity":"string","calories":number,"protein":number,"carbs":number,"fat":number}]}]}
 
 Food notes:
 ${rawText}`,
   });
 
-  return object.meals;
+  let data: unknown;
+  try {
+    data = extractJsonObject(text);
+  } catch {
+    throw new Error("Could not read JSON from the model response. Try again.");
+  }
+
+  const result = mealResultSchema.safeParse(data);
+  if (!result.success) {
+    throw new Error(
+      `Food JSON did not match the expected shape: ${result.error.message}`
+    );
+  }
+
+  return result.data.meals;
 }

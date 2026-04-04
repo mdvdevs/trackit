@@ -24,7 +24,7 @@ export async function saveWorkoutEntry(rawText: string, date: string) {
 
   const exerciseRows = parsed.map((ex) => ({
     entryId: entry.id,
-    userId: session.user.id!,
+    userId: session.user!.id!,
     name: ex.name,
     normalizedName: ex.normalizedName,
     sets: ex.sets,

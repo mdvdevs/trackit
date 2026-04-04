@@ -46,7 +46,7 @@ export async function saveFoodEntry(
 
     return {
       entryId: entry.id,
-      userId: session.user.id!,
+      userId: session.user!.id!,
       description: meal.description,
       items: meal.items,
       totalCalories,

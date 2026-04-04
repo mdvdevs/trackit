@@ -62,7 +62,7 @@ export function ExerciseProgressChart({
               borderRadius: "8px",
               fontSize: "12px",
             }}
-            formatter={(value: number) => [`${value} ${unit}`, "Max Weight"]}
+            formatter={(value) => [`${value} ${unit}`, "Max Weight"]}
             labelFormatter={(label) => {
               const d = new Date(label);
               return d.toLocaleDateString("en-IN", {

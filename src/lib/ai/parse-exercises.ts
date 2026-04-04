@@ -1,39 +1,61 @@
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
+import { extractJsonObject } from "@/lib/ai/extract-json";
 
-const exerciseSchema = z.object({
+const setSchema = z.object({
+  weight: z.coerce.number(),
+  unit: z.enum(["kg", "lbs"]),
+  reps: z.coerce.number().optional().default(1),
+});
+
+const exerciseResultSchema = z.object({
   exercises: z.array(
     z.object({
-      name: z.string().describe("Clean exercise name, e.g. 'Bench Press'"),
-      normalizedName: z
-        .string()
-        .describe("Lowercase snake_case, e.g. 'bench_press'"),
-      sets: z.array(
-        z.object({
-          weight: z.number().describe("Weight used for this set"),
-          unit: z.enum(["kg", "lbs"]).describe("Weight unit"),
-          reps: z
-            .number()
-            .optional()
-            .describe("Number of reps if mentioned, otherwise omit"),
-        })
-      ),
+      name: z.string(),
+      normalizedName: z.string(),
+      sets: z.array(setSchema),
     })
   ),
 });
 
-export type ParsedExercise = z.infer<typeof exerciseSchema>["exercises"][number];
+export type ParsedExercise = z.infer<typeof exerciseResultSchema>["exercises"][number];
 
+/**
+ * Free-form workout notes → structured exercises. Uses plain text generation + Zod validation
+ * so OpenAI never receives a nested JSON Schema (avoids invalid_json_schema / Missing 'reps' errors).
+ */
 export async function parseExercises(rawText: string) {
-  const { object } = await generateObject({
+  const { text } = await generateText({
     model: openai("gpt-4o-mini"),
-    schema: exerciseSchema,
-    prompt: `Parse the following workout notes into structured exercise data. Each line or sentence likely describes one exercise with its sets/weights. If reps are mentioned, include them. If only weights are listed (e.g. "40kg, 45kg, 50kg"), each is a separate set. Assume "kg" if no unit specified.
+    prompt: `Extract workout data from free-form notes. The user may write in ANY style they want: numbered sets, prose, commas, kg/lbs, shorthand, typos, multiple exercises in one block, blank lines, etc.
 
-Workout notes:
+Your job:
+- Infer distinct exercises and, for each, a list of sets.
+- Each set: weight (number), unit exactly "kg" or "lbs" (infer or default to kg), reps (number; if not stated, use 1).
+- name: readable exercise title. normalizedName: lowercase snake_case for grouping (e.g. bench_press).
+
+Output rules:
+- Reply with ONLY one JSON object, no markdown fences, no explanation.
+- Shape: {"exercises":[{"name":"...","normalizedName":"...","sets":[{"weight":15,"unit":"kg","reps":10}]}]}
+
+User notes:
 ${rawText}`,
   });
 
-  return object.exercises;
+  let data: unknown;
+  try {
+    data = extractJsonObject(text);
+  } catch {
+    throw new Error("Could not read JSON from the model response. Try again.");
+  }
+
+  const result = exerciseResultSchema.safeParse(data);
+  if (!result.success) {
+    throw new Error(
+      `Workout JSON did not match the expected shape: ${result.error.message}`
+    );
+  }
+
+  return result.data.exercises;
 }

@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TrackIt - Gym & Diet Tracker
 
-## Getting Started
+A mobile-first PWA for tracking workouts and nutrition using plain text. AI parses your natural language entries into structured data and shows your progress over time.
 
-First, run the development server:
+## Setup
+
+### 1. Create a Neon Postgres Database (free)
+
+1. Go to [neon.tech](https://neon.tech) and sign up
+2. Create a new project
+3. Copy the connection string
+
+### 2. Set up Google OAuth (free)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new project (or use existing)
+3. Go to "Credentials" > "Create Credentials" > "OAuth client ID"
+4. Application type: "Web application"
+5. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+6. Copy the Client ID and Client Secret
+
+### 3. Get an OpenAI API Key
+
+1. Go to [platform.openai.com](https://platform.openai.com/api-keys)
+2. Create a new API key
+3. Add some credits ($5 is plenty — GPT-4o-mini is extremely cheap)
+
+### 4. Configure Environment Variables
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local`:
+
+```
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+AUTH_SECRET=run-npx-auth-secret-to-generate
+AUTH_GOOGLE_ID=your-google-client-id
+AUTH_GOOGLE_SECRET=your-google-client-secret
+OPENAI_API_KEY=sk-your-openai-api-key
+```
+
+**`AUTH_SECRET` is required in production.** In local development, if it is missing, the app uses a temporary fallback so Google sign-in still works; you will see a warning in the terminal. Set a real secret for stable sessions and for deploys. Without it in production, you get `[auth][error] MissingSecret` and **500** on `/api/auth/signin/google`.
+
+Generate a secret (use this — it does not install the wrong npm package):
+
+```bash
+openssl rand -base64 32
+```
+
+Paste the output into `.env.local` as `AUTH_SECRET=...`.
+
+**Note:** Running `npx auth secret` can install an unrelated package named `auth` (Better Auth) and print `BETTER_AUTH_SECRET`. This app expects **`AUTH_SECRET`** for Auth.js. Either rename that line to `AUTH_SECRET=...`, or leave it as `BETTER_AUTH_SECRET` — TrackIt will also read that variable as a fallback.
+
+### 5. Push Database Schema
+
+```bash
+npx drizzle-kit push
+```
+
+If Google sign-in fails with `AdapterError` / Postgres `42P01` (undefined table), confirm you ran `db:push` against the same database as `DATABASE_URL`. The app wires `DrizzleAdapter` to the `users`, `accounts`, `sessions`, and `verification_tokens` tables from [`src/lib/db/schema.ts`](src/lib/db/schema.ts).
+
+### 6. Run the App
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To preview on your phone (same Wi-Fi):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Find your computer's IP
+ipconfig getifaddr en0
+# Then open http://<your-ip>:3000 on your phone
+```
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- **Workout Log** — Type exercises in plain text, AI extracts sets/weights
+- **Food Log** — Type meals in plain text, AI estimates calories and macros
+- **Progress Charts** — Track exercise weight trends and nutrition over time
+- **History** — Calendar view of past entries
+- **PWA** — Install on your phone's home screen
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router)
+- shadcn/ui + Tailwind CSS
+- Vercel AI SDK + GPT-4o-mini
+- Auth.js + Google OAuth
+- Neon Postgres + Drizzle ORM
+- Recharts
