@@ -22,10 +22,6 @@ export function ProfileEditor({ initialName, initialEmail, initialImage }: Profi
 
   const handleSave = () => {
     startTransition(async () => {
-      // #region agent log
-      const imageSizeBytes = image ? new Blob([image]).size : 0;
-      fetch('http://127.0.0.1:7554/ingest/b16d169d-d049-48b1-8399-b22e05b2c642',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7ee25c'},body:JSON.stringify({sessionId:'7ee25c',location:'profile-editor.tsx:handleSave',message:'before updateUserProfile',data:{imageSizeBytes,imageType:image?.substring(0,30),nameLen:name.length,emailLen:email.length},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       await updateUserProfile({
         name,
         email,
@@ -61,10 +57,6 @@ export function ProfileEditor({ initialName, initialEmail, initialImage }: Profi
         if (!ctx) return;
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const compressed = canvas.toDataURL("image/jpeg", 0.8);
-
-        // #region agent log
-        fetch('http://127.0.0.1:7554/ingest/b16d169d-d049-48b1-8399-b22e05b2c642',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7ee25c'},body:JSON.stringify({sessionId:'7ee25c',location:'profile-editor.tsx:handleImageChange:compressed',message:'post-fix compressed size',data:{compressedBytes:compressed.length,estimatedKB:(compressed.length/1024).toFixed(1),dims:`${canvas.width}x${canvas.height}`},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
 
         setImage(compressed);
       };
