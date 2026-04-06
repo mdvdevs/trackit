@@ -74,6 +74,23 @@ export default function WorkoutPage() {
     });
   };
 
+  const handleEdit = (id: string) => {
+    const exercise = savedExercises.find((e) => e.id === id);
+    if (!exercise) return;
+
+    const formattedText = `${exercise.name} - ${exercise.sets
+      .map((s) => `${s.weight}${s.unit}${s.reps ? ` x ${s.reps}` : ""}`)
+      .join(", ")}`;
+
+    setText(formattedText);
+    
+    // Delete the original so it doesn't double-save
+    handleDelete(id);
+
+    // Scroll to top where the editor is
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div className="mx-auto max-w-lg">
       <div className="flex items-center gap-2 px-4 pt-4">
@@ -88,7 +105,7 @@ export default function WorkoutPage() {
           <NoteEditor
             value={text}
             onChange={setText}
-            placeholder={`Type your workout...\n\nBench press - 40kg, 45kg, 50kg, 60kg\nIncline dumbbell press - 20kg x 10, 22kg x 8\nSquat - 80kg x 5, 90kg x 5, 100kg x 3`}
+            placeholder={`Type your workout... e.g. Bench press - 40kg x 10`}
           />
         </div>
 
@@ -116,7 +133,7 @@ export default function WorkoutPage() {
             <h2 className="text-sm font-semibold text-muted-foreground">
               Exercises
             </h2>
-            <div className="space-y-2">
+            <div className="flex flex-col">
               {savedExercises.map((ex) => (
                 <ExerciseCard
                   key={ex.id}
@@ -124,6 +141,7 @@ export default function WorkoutPage() {
                   name={ex.name}
                   sets={ex.sets}
                   onDelete={handleDelete}
+                  onEdit={handleEdit}
                 />
               ))}
             </div>

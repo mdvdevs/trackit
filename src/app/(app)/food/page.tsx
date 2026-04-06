@@ -96,6 +96,20 @@ export default function FoodPage() {
     });
   };
 
+  const handleEdit = (id: string) => {
+    const meal = savedMeals.find((m) => m.id === id);
+    if (!meal) return;
+
+    setText(meal.description);
+    setMealTime(meal.mealTime);
+    
+    // Delete the original so it doesn't double-save
+    handleDelete(id);
+
+    // Scroll to top where the editor is
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const mealsByLabel = savedMeals.reduce(
     (acc, meal) => {
       const label = meal.mealLabel;
@@ -127,7 +141,7 @@ export default function FoodPage() {
           <NoteEditor
             value={text}
             onChange={setText}
-            placeholder={`Type what you ate...\n\n2 rotis with dal and salad\n100gm rice with rajma sabzi\n1 banana and a glass of milk`}
+            placeholder={`Type what you ate... e.g. 2 rotis with dal`}
           />
         </div>
 
@@ -163,13 +177,16 @@ export default function FoodPage() {
                   <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
                     {label}
                   </h3>
-                  {group.map((meal) => (
-                    <MealCard
-                      key={meal.id}
-                      {...meal}
-                      onDelete={handleDelete}
-                    />
-                  ))}
+                  <div className="flex flex-col">
+                    {group.map((meal) => (
+                      <MealCard
+                        key={meal.id}
+                        {...meal}
+                        onDelete={handleDelete}
+                        onEdit={handleEdit}
+                      />
+                    ))}
+                  </div>
                 </div>
               );
             })}

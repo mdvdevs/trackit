@@ -19,11 +19,11 @@ A mobile-first PWA for tracking workouts and nutrition using plain text. AI pars
 5. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
 6. Copy the Client ID and Client Secret
 
-### 3. Get an OpenAI API Key
+### 3. Get a Google Gemini API Key
 
-1. Go to [platform.openai.com](https://platform.openai.com/api-keys)
-2. Create a new API key
-3. Add some credits ($5 is plenty — GPT-4o-mini is extremely cheap)
+1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Sign in with your Google account
+3. Create a new API key (free tier is plenty for personal use)
 
 ### 4. Configure Environment Variables
 
@@ -40,7 +40,7 @@ DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 AUTH_SECRET=run-npx-auth-secret-to-generate
 AUTH_GOOGLE_ID=your-google-client-id
 AUTH_GOOGLE_SECRET=your-google-client-secret
-OPENAI_API_KEY=sk-your-openai-api-key
+GOOGLE_GENERATIVE_AI_API_KEY=your-gemini-api-key
 ```
 
 **`AUTH_SECRET` is required in production.** In local development, if it is missing, the app uses a temporary fallback so Google sign-in still works; you will see a warning in the terminal. Set a real secret for stable sessions and for deploys. Without it in production, you get `[auth][error] MissingSecret` and **500** on `/api/auth/signin/google`.
@@ -91,7 +91,7 @@ ipconfig getifaddr en0
 
 - Next.js 16 (App Router)
 - shadcn/ui + Tailwind CSS
-- Vercel AI SDK + GPT-4o-mini
+- Vercel AI SDK + Gemini 2.0 Flash
 - Auth.js + Google OAuth
 - Neon Postgres + Drizzle ORM
 - Recharts

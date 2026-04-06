@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2, TrendingUp, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,7 +102,10 @@ export default function ProgressPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <div className="flex items-center gap-2 px-4 pt-4">
+      <div className="flex items-center gap-3 px-4 pt-4">
+        <Link href="/me" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
         <TrendingUp className="h-5 w-5 text-primary" />
         <h1 className="text-lg font-bold">Progress</h1>
       </div>

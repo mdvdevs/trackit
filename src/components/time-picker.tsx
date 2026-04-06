@@ -22,7 +22,7 @@ export function TimePicker({ value, onChange, className }: TimePickerProps) {
         type="time"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent text-sm font-mono focus:outline-none w-[5.5rem]"
+        className="bg-transparent text-sm font-mono focus:outline-none flex flex-wrap w-fit"
       />
     </div>
   );

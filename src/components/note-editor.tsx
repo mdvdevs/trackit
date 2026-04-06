@@ -34,13 +34,10 @@ export function NoteEditor({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "w-full resize-none bg-transparent px-4 py-3 text-base leading-relaxed",
+          "w-full resize-none bg-transparent px-4 py-4 text-base leading-8",
           "placeholder:text-muted-foreground/50",
           "focus:outline-none",
-          "min-h-[200px]",
-          "bg-[linear-gradient(transparent_calc(1.75rem_-_1px),_var(--color-border)_calc(1.75rem_-_1px))]",
-          "bg-[size:100%_1.75rem]",
-          "leading-[1.75rem]"
+          "min-h-[150px]"
         )}
         spellCheck={false}
       />

@@ -7,7 +7,9 @@ import {
   Loader2,
   Dumbbell,
   UtensilsCrossed,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -100,7 +102,10 @@ export default function HistoryPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <div className="flex items-center gap-2 px-4 pt-4">
+      <div className="flex items-center gap-3 px-4 pt-4">
+        <Link href="/me" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
         <CalendarIcon className="h-5 w-5 text-primary" />
         <h1 className="text-lg font-bold">History</h1>
       </div>
@@ -160,14 +165,16 @@ export default function HistoryPage() {
                 <Dumbbell className="h-4 w-4" />
                 Workouts
               </h3>
-              {workouts.map((ex) => (
-                <ExerciseCard
-                  key={ex.id}
-                  id={ex.id}
-                  name={ex.name}
-                  sets={ex.sets}
-                />
-              ))}
+              <div className="flex flex-col">
+                {workouts.map((ex) => (
+                  <ExerciseCard
+                    key={ex.id}
+                    id={ex.id}
+                    name={ex.name}
+                    sets={ex.sets}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -177,9 +184,11 @@ export default function HistoryPage() {
                 <UtensilsCrossed className="h-4 w-4" />
                 Meals
               </h3>
-              {meals.map((meal) => (
-                <MealCard key={meal.id} {...meal} />
-              ))}
+              <div className="flex flex-col">
+                {meals.map((meal) => (
+                  <MealCard key={meal.id} {...meal} />
+                ))}
+              </div>
             </div>
           )}
         </div>
