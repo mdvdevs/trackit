@@ -55,6 +55,8 @@ Paste the output into `.env.local` as `AUTH_SECRET=...`.
 
 **Note:** Running `npx auth secret` can install an unrelated package named `auth` (Better Auth) and print `BETTER_AUTH_SECRET`. This app expects **`AUTH_SECRET`** for Auth.js. Either rename that line to `AUTH_SECRET=...`, or leave it as `BETTER_AUTH_SECRET` — TrackIt will also read that variable as a fallback.
 
+**Vercel / production — Server Actions:** If you see `UnrecognizedActionError` or “Server Action … was not found” after a deploy, set **`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`** in the Vercel project (same value for **Production** and **Preview**; expose it to **Build** and **Runtime**). Generate it with `openssl rand -base64 32`. Without it, Next.js picks a new key every build, so action IDs change on every deployment while users may still have an old tab open. Optionally turn on [Skew Protection](https://vercel.com/docs/deployments/skew-protection) for the project so requests stay on the deployment that served the page.
+
 ### 5. Push Database Schema
 
 ```bash

@@ -8,9 +8,6 @@ import { parseExercises } from "@/lib/ai/parse-exercises";
 import { eq, and, desc } from "drizzle-orm";
 
 export async function saveWorkoutEntry(rawText: string, date: string) {
-  // #region agent log
-  console.log("[debug:9c2670] saveWorkoutEntry reached", { hasDb: !!process.env.DATABASE_URL, hasSecret: !!process.env.AUTH_SECRET, hasGoogleId: !!process.env.AUTH_GOOGLE_ID, ts: Date.now() });
-  // #endregion
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
