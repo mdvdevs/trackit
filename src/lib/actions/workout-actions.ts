@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { entries, exercises } from "@/lib/db/schema";
@@ -35,6 +36,7 @@ export async function saveWorkoutEntry(rawText: string, date: string) {
     await db.insert(exercises).values(exerciseRows);
   }
 
+  revalidatePath("/workout");
   return { entry, exercises: parsed };
 }
 
@@ -60,4 +62,6 @@ export async function deleteExercise(exerciseId: string) {
     .where(
       and(eq(exercises.id, exerciseId), eq(exercises.userId, session.user.id))
     );
+
+  revalidatePath("/workout");
 }
