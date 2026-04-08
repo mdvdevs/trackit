@@ -1,4 +1,6 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { neon } from "@neondatabase/serverless";
+import { drizzle as drizzleHttp } from "drizzle-orm/neon-http";
+import { drizzle as drizzleWs } from "drizzle-orm/neon-serverless";
 import ws from "ws";
 import * as schema from "./schema";
 
@@ -11,12 +13,24 @@ if (!databaseUrl) {
 }
 
 /**
- * Neon HTTP (`neon-http` + `neon()`) uses `fetch` to the Neon SQL-over-HTTP API. On some local
- * networks that fails with `TypeError: fetch failed` even though Postgres is reachable. The
- * WebSocket `Pool` driver avoids that path and matches Neon’s recommended Node.js setup.
+ * - **Vercel (VERCEL=1):** Neon SQL-over-HTTP via `fetch` — reliable on serverless; avoids bundling/runtime issues with `ws`.
+ * - **Local:** WebSocket `Pool` helps when HTTP `fetch` to Neon fails on some networks (`TypeError: fetch failed`).
+ * Override: `TRACKIT_NEON_DRIVER=http` or `=ws`.
  */
-export const db = drizzle({
-  connection: databaseUrl,
-  ws,
-  schema,
-});
+const driver =
+  process.env.TRACKIT_NEON_DRIVER?.toLowerCase() === "ws"
+    ? "ws"
+    : process.env.TRACKIT_NEON_DRIVER?.toLowerCase() === "http"
+      ? "http"
+      : process.env.VERCEL === "1"
+        ? "http"
+        : "ws";
+
+export const db =
+  driver === "http"
+    ? drizzleHttp(neon(databaseUrl), { schema })
+    : drizzleWs({
+        connection: databaseUrl,
+        ws,
+        schema,
+      });
