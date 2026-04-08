@@ -14,6 +14,8 @@ import {
   getMealsByDate,
   deleteMeal,
 } from "@/lib/actions/food-actions";
+import { getNutritionProfileWithTargets } from "@/lib/actions/nutrition-profile-actions";
+import { cn } from "@/lib/utils";
 
 type SavedMeal = {
   id: string;
@@ -43,8 +45,23 @@ export default function FoodPage() {
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
+  const [dailyCalorieTarget, setDailyCalorieTarget] = useState<number | null>(
+    null
+  );
+  const [dailyProteinTarget, setDailyProteinTarget] = useState<number | null>(
+    null
+  );
 
   const dateStr = format(date, "yyyy-MM-dd");
+
+  useEffect(() => {
+    getNutritionProfileWithTargets().then((d) => {
+      if (d.targets) {
+        setDailyCalorieTarget(d.targets.dailyCalories);
+        setDailyProteinTarget(d.targets.dailyProtein);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     setIsLoading(true);
@@ -122,6 +139,13 @@ export default function FoodPage() {
 
   const labelOrder = ["breakfast", "lunch", "snack", "dinner"];
 
+  const dayCalories = savedMeals.reduce((s, m) => s + m.totalCalories, 0);
+  const dayProtein = savedMeals.reduce((s, m) => s + m.totalProtein, 0);
+  const overCalories =
+    dailyCalorieTarget != null && dayCalories > dailyCalorieTarget;
+  const underProtein =
+    dailyProteinTarget != null && dayProtein > 0 && dayProtein < dailyProteinTarget;
+
   return (
     <div className="mx-auto max-w-lg">
       <div className="flex items-center gap-2 px-4 pt-4">
@@ -130,6 +154,38 @@ export default function FoodPage() {
       </div>
 
       <DateHeader date={date} onDateChange={setDate} />
+
+      {dailyCalorieTarget != null && dailyProteinTarget != null ? (
+        <div className="mx-4 mb-3 rounded-xl border bg-card px-3 py-2.5 text-sm">
+          <p className="text-muted-foreground">
+            Daily allowance:{" "}
+            <span className="font-semibold text-foreground">
+              {dailyCalorieTarget} kcal
+            </span>
+            {" · "}
+            Protein goal:{" "}
+            <span className="font-semibold text-foreground">
+              {dailyProteinTarget} g
+            </span>
+          </p>
+          {!isLoading && savedMeals.length > 0 ? (
+            <p
+              className={cn(
+                "mt-1.5 text-xs",
+                overCalories || underProtein
+                  ? "font-medium text-destructive"
+                  : "text-muted-foreground"
+              )}
+            >
+              Logged today: {Math.round(dayCalories)} kcal,{" "}
+              {dayProtein.toFixed(1)} g protein
+              {overCalories ? " — over calorie budget" : ""}
+              {underProtein ? " — below protein goal" : ""}
+              {!overCalories && !underProtein ? " — on track" : ""}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="px-4">
         <div className="flex items-center justify-between mb-2">
@@ -196,7 +252,11 @@ export default function FoodPage() {
             <h2 className="text-sm font-semibold text-muted-foreground">
               Nutrition Summary
             </h2>
-            <NutritionTable meals={savedMeals} />
+            <NutritionTable
+              meals={savedMeals}
+              dailyCalorieTarget={dailyCalorieTarget ?? undefined}
+              dailyProteinTarget={dailyProteinTarget ?? undefined}
+            />
           </div>
         </div>
       ) : (

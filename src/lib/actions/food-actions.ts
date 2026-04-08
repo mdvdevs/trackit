@@ -21,62 +21,49 @@ export async function saveFoodEntry(
   date: string,
   mealTime: string
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) throw new Error("Not authenticated");
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
 
-    const parsed = await parseMeals(rawText);
+  const parsed = await parseMeals(rawText);
 
-    const [entry] = await db
-      .insert(entries)
-      .values({
-        userId: session.user.id,
-        rawText,
-        type: "food",
-        date,
-      })
-      .returning();
+  const [entry] = await db
+    .insert(entries)
+    .values({
+      userId: session.user.id,
+      rawText,
+      type: "food",
+      date,
+    })
+    .returning();
 
-    const mealLabel = getMealLabel(mealTime);
+  const mealLabel = getMealLabel(mealTime);
 
-    const mealRows = parsed.map((meal) => {
-      const totalCalories = meal.items.reduce((sum, i) => sum + i.calories, 0);
-      const totalProtein = meal.items.reduce((sum, i) => sum + i.protein, 0);
-      const totalCarbs = meal.items.reduce((sum, i) => sum + i.carbs, 0);
-      const totalFat = meal.items.reduce((sum, i) => sum + i.fat, 0);
+  const mealRows = parsed.map((meal) => {
+    const totalCalories = meal.items.reduce((sum, i) => sum + i.calories, 0);
+    const totalProtein = meal.items.reduce((sum, i) => sum + i.protein, 0);
+    const totalCarbs = meal.items.reduce((sum, i) => sum + i.carbs, 0);
+    const totalFat = meal.items.reduce((sum, i) => sum + i.fat, 0);
 
-      return {
-        entryId: entry.id,
-        userId: session.user!.id!,
-        description: meal.description,
-        items: meal.items,
-        totalCalories,
-        totalProtein,
-        totalCarbs,
-        totalFat,
-        mealTime,
-        mealLabel,
-        date,
-      };
-    });
+    return {
+      entryId: entry.id,
+      userId: session.user!.id!,
+      description: meal.description,
+      items: meal.items,
+      totalCalories,
+      totalProtein,
+      totalCarbs,
+      totalFat,
+      mealTime,
+      mealLabel,
+      date,
+    };
+  });
 
-    if (mealRows.length > 0) {
-      await db.insert(meals).values(mealRows);
-    }
-
-    return { entry, meals: parsed };
-  } catch (e) {
-    const err = e as Error;
-    console.error(
-      JSON.stringify({
-        tag: "trackit-saveFoodEntry-error",
-        message: err?.message?.slice(0, 500),
-        name: err?.name,
-        t: Date.now(),
-      })
-    );
-    throw e;
+  if (mealRows.length > 0) {
+    await db.insert(meals).values(mealRows);
   }
+
+  return { entry, meals: parsed };
 }
 
 export async function getMealsByDate(date: string) {

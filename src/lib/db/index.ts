@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import ws from "ws";
 import * as schema from "./schema";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -10,5 +10,13 @@ if (!databaseUrl) {
   );
 }
 
-const sql = neon(databaseUrl);
-export const db = drizzle(sql, { schema });
+/**
+ * Neon HTTP (`neon-http` + `neon()`) uses `fetch` to the Neon SQL-over-HTTP API. On some local
+ * networks that fails with `TypeError: fetch failed` even though Postgres is reachable. The
+ * WebSocket `Pool` driver avoids that path and matches Neon’s recommended Node.js setup.
+ */
+export const db = drizzle({
+  connection: databaseUrl,
+  ws,
+  schema,
+});

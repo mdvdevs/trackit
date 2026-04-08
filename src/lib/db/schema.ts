@@ -48,6 +48,38 @@ export const verificationTokens = pgTable("verification_tokens", {
   expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
+export const activityLevels = [
+  "sedentary",
+  "light",
+  "moderate",
+  "active",
+  "very_active",
+] as const;
+export type ActivityLevel = (typeof activityLevels)[number];
+
+export const nutritionGoals = [
+  "lose_weight",
+  "maintain",
+  "gain_muscle",
+] as const;
+export type NutritionGoal = (typeof nutritionGoals)[number];
+
+/** Body stats + goal for daily calorie / protein targets (Mifflin–St Jeor + activity). */
+export const userProfiles = pgTable("user_profiles", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  weightKg: real("weight_kg").notNull(),
+  heightCm: real("height_cm").notNull(),
+  waistCm: real("waist_cm"),
+  sex: text("sex").notNull().$type<"male" | "female">(),
+  age: integer("age").notNull(),
+  activityLevel: text("activity_level").notNull().$type<ActivityLevel>(),
+  goal: text("goal").notNull().$type<NutritionGoal>(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 export const entries = pgTable("entries", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")

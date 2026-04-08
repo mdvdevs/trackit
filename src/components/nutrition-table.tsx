@@ -10,6 +10,7 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Meal {
   description: string;
@@ -22,9 +23,16 @@ interface Meal {
 
 interface NutritionTableProps {
   meals: Meal[];
+  /** When set, totals are compared for limit styling */
+  dailyCalorieTarget?: number;
+  dailyProteinTarget?: number;
 }
 
-export function NutritionTable({ meals }: NutritionTableProps) {
+export function NutritionTable({
+  meals,
+  dailyCalorieTarget,
+  dailyProteinTarget,
+}: NutritionTableProps) {
   if (meals.length === 0) return null;
 
   const totals = meals.reduce(
@@ -37,8 +45,26 @@ export function NutritionTable({ meals }: NutritionTableProps) {
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
+  const overCalories =
+    dailyCalorieTarget != null && totals.calories > dailyCalorieTarget;
+  const underProtein =
+    dailyProteinTarget != null && totals.protein < dailyProteinTarget;
+
   return (
     <div className="rounded-lg border">
+      {dailyCalorieTarget != null && dailyProteinTarget != null ? (
+        <div className="border-b px-3 py-2 text-xs text-muted-foreground">
+          Targets for this day:{" "}
+          <span className="font-medium text-foreground">
+            {dailyCalorieTarget} kcal
+          </span>
+          ,{" "}
+          <span className="font-medium text-foreground">
+            {dailyProteinTarget} g protein
+          </span>
+          . Red = over calorie budget or under protein goal.
+        </div>
+      ) : null}
       <Table>
         <TableHeader>
           <TableRow>
@@ -78,10 +104,20 @@ export function NutritionTable({ meals }: NutritionTableProps) {
         <TableFooter>
           <TableRow>
             <TableCell className="font-semibold text-sm">Total</TableCell>
-            <TableCell className="text-right font-mono text-xs font-bold">
+            <TableCell
+              className={cn(
+                "text-right font-mono text-xs font-bold",
+                overCalories && "text-destructive"
+              )}
+            >
               {totals.calories}
             </TableCell>
-            <TableCell className="text-right font-mono text-xs font-bold">
+            <TableCell
+              className={cn(
+                "text-right font-mono text-xs font-bold",
+                underProtein && "text-destructive"
+              )}
+            >
               {totals.protein.toFixed(1)}g
             </TableCell>
             <TableCell className="text-right font-mono text-xs font-bold">

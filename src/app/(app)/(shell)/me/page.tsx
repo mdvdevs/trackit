@@ -1,9 +1,18 @@
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { User, Calendar, TrendingUp, LogOut, ChevronRight } from "lucide-react";
+import {
+  User,
+  Calendar,
+  TrendingUp,
+  LogOut,
+  ChevronRight,
+  Target,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileEditor } from "@/components/profile-editor";
+import { NutritionProfileForm } from "@/components/nutrition-profile-form";
+import { getNutritionProfileWithTargets } from "@/lib/actions/nutrition-profile-actions";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -22,6 +31,9 @@ export default async function MePage() {
   const email = dbUser?.email || session.user.email || "";
   const image = dbUser?.image || session.user.image || null;
 
+  const { profile, targets } = await getNutritionProfileWithTargets();
+  if (!profile || !targets) redirect("/onboarding");
+
   return (
     <div className="mx-auto max-w-lg">
       <div className="flex items-center gap-2 px-4 pt-4 pb-6">
@@ -35,6 +47,25 @@ export default async function MePage() {
           initialEmail={email} 
           initialImage={image} 
         />
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Target className="h-4 w-4 text-primary" />
+            Goals & measurements
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Current plan:{" "}
+            <span className="font-medium text-foreground">
+              {targets.dailyCalories} kcal / day
+            </span>
+            ,{" "}
+            <span className="font-medium text-foreground">
+              {targets.dailyProtein} g protein
+            </span>
+            . Estimates from your stats; not medical advice.
+          </p>
+          <NutritionProfileForm initial={profile} />
+        </div>
 
         <div className="rounded-xl border bg-card overflow-hidden">
           <Link href="/history" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors border-b">
