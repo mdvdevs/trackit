@@ -13,18 +13,16 @@ if (!databaseUrl) {
 }
 
 /**
- * - **Vercel (VERCEL=1):** Neon SQL-over-HTTP via `fetch` — reliable on serverless; avoids bundling/runtime issues with `ws`.
- * - **Local:** WebSocket `Pool` helps when HTTP `fetch` to Neon fails on some networks (`TypeError: fetch failed`).
+ * - **Vercel:** HTTP (`fetch`) — stable on serverless.
+ * - **Local default:** WebSocket pool — some networks get `fetch failed` with Neon HTTP.
  * Override: `TRACKIT_NEON_DRIVER=http` or `=ws`.
  */
-const driver =
-  process.env.TRACKIT_NEON_DRIVER?.toLowerCase() === "ws"
-    ? "ws"
-    : process.env.TRACKIT_NEON_DRIVER?.toLowerCase() === "http"
-      ? "http"
-      : process.env.VERCEL === "1"
-        ? "http"
-        : "ws";
+const driver = (() => {
+  const o = process.env.TRACKIT_NEON_DRIVER?.toLowerCase();
+  if (o === "http") return "http";
+  if (o === "ws") return "ws";
+  return process.env.VERCEL === "1" ? "http" : "ws";
+})();
 
 export const db =
   driver === "http"
