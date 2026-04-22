@@ -1,2 +1,0 @@
-{"sessionId":"7ee25c","location":"profile-editor.tsx:handleImageChange:compressed","message":"post-fix compressed size","data":{"compressedBytes":12631,"estimatedKB":"12.3","dims":"256x144"},"timestamp":1775483719435,"runId":"post-fix","hypothesisId":"H1"}
-{"sessionId":"7ee25c","location":"profile-editor.tsx:handleSave","message":"before updateUserProfile","data":{"imageSizeBytes":12631,"imageType":"data:image/jpeg;base64,/9j/4AA","nameLen":14,"emailLen":27},"timestamp":1775483720876,"hypothesisId":"H1"}
