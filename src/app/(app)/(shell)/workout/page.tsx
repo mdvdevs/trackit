@@ -2,21 +2,27 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { format } from "date-fns";
-import { Loader2, Save, Dumbbell } from "lucide-react";
+import { Loader2, Plus, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DateHeader } from "@/components/date-header";
-import { NoteEditor } from "@/components/note-editor";
+import { SearchableSelect } from "@/components/searchable-select";
 import { ExerciseCard } from "@/components/exercise-card";
 import { WorkoutTable } from "@/components/workout-table";
 import {
-  saveWorkoutEntry,
+  addWorkoutSet,
+  getExerciseSuggestions,
   getWorkoutsByDate,
   deleteExercise,
 } from "@/lib/actions/workout-actions";
 
 export default function WorkoutPage() {
   const [date, setDate] = useState(new Date());
-  const [text, setText] = useState("");
+  const [exerciseName, setExerciseName] = useState("");
+  const [weight, setWeight] = useState("");
+  const [reps, setReps] = useState("");
+  const [unit, setUnit] = useState<"kg" | "lbs">("kg");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [savedExercises, setSavedExercises] = useState<
     {
       id: string;
@@ -28,6 +34,10 @@ export default function WorkoutPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const dateStr = format(date, "yyyy-MM-dd");
+
+  useEffect(() => {
+    getExerciseSuggestions().then(setSuggestions);
+  }, []);
 
   useEffect(() => {
     setIsLoading(true);
@@ -44,18 +54,18 @@ export default function WorkoutPage() {
       .finally(() => setIsLoading(false));
   }, [dateStr]);
 
-  const handleSave = () => {
-    if (!text.trim()) return;
+  const canAdd = exerciseName.trim() && weight && reps;
+
+  const handleAdd = () => {
+    if (!canAdd) return;
+    const w = parseFloat(weight);
+    const r = parseInt(reps, 10);
+    if (isNaN(w) || isNaN(r) || w <= 0 || r <= 0) return;
+
     startTransition(async () => {
-      const result = await saveWorkoutEntry(text.trim(), dateStr);
-      setSavedExercises((prev) => [
-        ...result.exercises.map((e, i) => ({
-          id: `new-${Date.now()}-${i}`,
-          ...e,
-        })),
-        ...prev,
-      ]);
-      setText("");
+      await addWorkoutSet(exerciseName.trim(), w, unit, r, dateStr);
+      setWeight("");
+      setReps("");
       const fresh = await getWorkoutsByDate(dateStr);
       setSavedExercises(
         fresh.map((e) => ({
@@ -64,6 +74,9 @@ export default function WorkoutPage() {
           sets: e.sets as { weight: number; unit: string; reps?: number }[],
         }))
       );
+      if (!suggestions.some((s) => s.toLowerCase() === exerciseName.trim().toLowerCase())) {
+        setSuggestions((prev) => [...prev, exerciseName.trim()].sort((a, b) => a.localeCompare(b)));
+      }
     });
   };
 
@@ -72,23 +85,6 @@ export default function WorkoutPage() {
       await deleteExercise(id);
       setSavedExercises((prev) => prev.filter((e) => e.id !== id));
     });
-  };
-
-  const handleEdit = (id: string) => {
-    const exercise = savedExercises.find((e) => e.id === id);
-    if (!exercise) return;
-
-    const formattedText = `${exercise.name} - ${exercise.sets
-      .map((s) => `${s.weight}${s.unit}${s.reps ? ` x ${s.reps}` : ""}`)
-      .join(", ")}`;
-
-    setText(formattedText);
-    
-    // Delete the original so it doesn't double-save
-    handleDelete(id);
-
-    // Scroll to top where the editor is
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -100,26 +96,52 @@ export default function WorkoutPage() {
 
       <DateHeader date={date} onDateChange={setDate} />
 
-      <div className="px-4">
-        <div className="rounded-xl border bg-card">
-          <NoteEditor
-            value={text}
-            onChange={setText}
-            placeholder={`Type your workout... e.g. Bench press - 40kg x 10`}
+      <div className="px-4 space-y-3">
+        <SearchableSelect
+          options={suggestions}
+          value={exerciseName}
+          onChange={setExerciseName}
+          placeholder="Search exercise..."
+          emptyText="No exercises found"
+        />
+
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            inputMode="decimal"
+            placeholder="Weight"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            className="flex-1"
+          />
+          <button
+            type="button"
+            onClick={() => setUnit((u) => (u === "kg" ? "lbs" : "kg"))}
+            className="shrink-0 rounded-lg border bg-card px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            {unit}
+          </button>
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="Reps"
+            value={reps}
+            onChange={(e) => setReps(e.target.value)}
+            className="flex-1"
           />
         </div>
 
         <Button
-          onClick={handleSave}
-          disabled={isPending || !text.trim()}
-          className="mt-3 w-full gap-2"
+          onClick={handleAdd}
+          disabled={isPending || !canAdd}
+          className="w-full gap-2"
         >
           {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Save className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
           )}
-          {isPending ? "Parsing with AI..." : "Save & Parse"}
+          {isPending ? "Adding..." : "Add Set"}
         </Button>
       </div>
 
@@ -141,7 +163,6 @@ export default function WorkoutPage() {
                   name={ex.name}
                   sets={ex.sets}
                   onDelete={handleDelete}
-                  onEdit={handleEdit}
                 />
               ))}
             </div>
@@ -161,7 +182,7 @@ export default function WorkoutPage() {
             No workouts logged for this day
           </p>
           <p className="text-xs text-muted-foreground/70">
-            Type your exercises above and hit Save
+            Search an exercise, enter weight & reps, then tap Add Set
           </p>
         </div>
       )}

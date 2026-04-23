@@ -1,18 +1,25 @@
 "use client";
 
 import {
-  LineChart,
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
   Line,
+  LineChart,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend,
 } from "recharts";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 interface LineChartData {
   date: string;
@@ -31,56 +38,58 @@ export function ExerciseProgressChart({
   title,
   data,
   unit = "kg",
-  color = "var(--color-chart-1)",
+  color = "hsl(var(--chart-1))",
 }: ExerciseChartProps) {
   if (data.length === 0) return null;
 
+  const chartConfig = {
+    value: {
+      label: "Max Weight",
+      color: color,
+    },
+  } satisfies ChartConfig;
+
   return (
-    <Card className="p-4 space-y-3">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-          <XAxis
-            dataKey="date"
-            className="text-xs"
-            tick={{ fontSize: 10 }}
-            tickFormatter={(v) => {
-              const d = new Date(v);
-              return `${d.getDate()}/${d.getMonth() + 1}`;
-            }}
-          />
-          <YAxis
-            className="text-xs"
-            tick={{ fontSize: 10 }}
-            tickFormatter={(v) => `${v}${unit}`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "var(--color-card)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "8px",
-              fontSize: "12px",
-            }}
-            formatter={(value) => [`${value} ${unit}`, "Max Weight"]}
-            labelFormatter={(label) => {
-              const d = new Date(label);
-              return d.toLocaleDateString("en-IN", {
-                day: "numeric",
-                month: "short",
-              });
-            }}
-          />
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke={color}
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            activeDot={{ r: 5 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>Your max weight over time</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+          <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(v) => {
+                const d = new Date(v);
+                return `${d.getDate()}/${d.getMonth() + 1}`;
+              }}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(v) => `${v}${unit}`}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="var(--color-value)"
+              strokeWidth={2}
+              dot={{ fill: "var(--color-value)", r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ChartContainer>
+      </CardContent>
     </Card>
   );
 }
@@ -97,104 +106,136 @@ interface NutritionChartProps {
   data: MacroChartData[];
 }
 
+const nutritionConfig = {
+  calories: {
+    label: "Calories",
+    color: "hsl(var(--chart-1))",
+  },
+  protein: {
+    label: "Protein",
+    color: "hsl(var(--chart-2))",
+  },
+  carbs: {
+    label: "Carbs",
+    color: "hsl(var(--chart-3))",
+  },
+  fat: {
+    label: "Fat",
+    color: "hsl(var(--chart-4))",
+  },
+} satisfies ChartConfig;
+
 export function NutritionProgressChart({ data }: NutritionChartProps) {
   if (data.length === 0) return null;
 
   return (
     <div className="space-y-4">
-      <Card className="p-4 space-y-3">
-        <h3 className="text-sm font-semibold">Daily Calories</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis
-              dataKey="date"
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              tickFormatter={(v) => {
-                const d = new Date(v);
-                return `${d.getDate()}/${d.getMonth() + 1}`;
-              }}
-            />
-            <YAxis className="text-xs" tick={{ fontSize: 10 }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--color-card)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-              labelFormatter={(label) => {
-                const d = new Date(label);
-                return d.toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                });
-              }}
-            />
-            <Bar dataKey="calories" fill="var(--color-chart-1)" radius={4} />
-          </BarChart>
-        </ResponsiveContainer>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Daily Calories</CardTitle>
+          <CardDescription>Total calories consumed per day</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={nutritionConfig} className="h-[200px] w-full">
+            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(v) => {
+                  const d = new Date(v);
+                  return `${d.getDate()}/${d.getMonth() + 1}`;
+                }}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <ChartTooltip
+                cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+                content={<ChartTooltipContent indicator="dashed" />}
+              />
+              <Bar
+                dataKey="calories"
+                fill="var(--color-calories)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
       </Card>
 
-      <Card className="p-4 space-y-3">
-        <h3 className="text-sm font-semibold">Macros Over Time</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis
-              dataKey="date"
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              tickFormatter={(v) => {
-                const d = new Date(v);
-                return `${d.getDate()}/${d.getMonth() + 1}`;
-              }}
-            />
-            <YAxis
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              tickFormatter={(v) => `${v}g`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--color-card)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-              labelFormatter={(label) => {
-                const d = new Date(label);
-                return d.toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                });
-              }}
-            />
-            <Legend iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
-            <Line
-              type="monotone"
-              dataKey="protein"
-              stroke="var(--color-chart-2)"
-              strokeWidth={2}
-              dot={{ r: 2 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="carbs"
-              stroke="var(--color-chart-3)"
-              strokeWidth={2}
-              dot={{ r: 2 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="fat"
-              stroke="var(--color-chart-5)"
-              strokeWidth={2}
-              dot={{ r: 2 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Macros Over Time</CardTitle>
+          <CardDescription>Protein, carbs, and fat breakdown</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={nutritionConfig} className="h-[250px] w-full">
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="fillProtein" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-protein)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--color-protein)" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="fillCarbs" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-carbs)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--color-carbs)" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="fillFat" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-fat)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--color-fat)" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(v) => {
+                  const d = new Date(v);
+                  return `${d.getDate()}/${d.getMonth() + 1}`;
+                }}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(v) => `${v}g`}
+              />
+              <ChartTooltip
+                cursor={{ stroke: "var(--muted-foreground)", strokeWidth: 1, strokeDasharray: "3 3" }}
+                content={<ChartTooltipContent indicator="dot" />}
+              />
+              <Area
+                type="monotone"
+                dataKey="carbs"
+                stackId="1"
+                stroke="var(--color-carbs)"
+                fill="url(#fillCarbs)"
+              />
+              <Area
+                type="monotone"
+                dataKey="protein"
+                stackId="1"
+                stroke="var(--color-protein)"
+                fill="url(#fillProtein)"
+              />
+              <Area
+                type="monotone"
+                dataKey="fat"
+                stackId="1"
+                stroke="var(--color-fat)"
+                fill="url(#fillFat)"
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+            </AreaChart>
+          </ChartContainer>
+        </CardContent>
       </Card>
     </div>
   );

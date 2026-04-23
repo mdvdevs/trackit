@@ -27,6 +27,7 @@ export function MealCard({
   totalProtein,
   totalCarbs,
   totalFat,
+  items,
   onDelete,
   onEdit,
 }: MealCardProps) {
@@ -51,7 +52,13 @@ export function MealCard({
               {formatTime(mealTime)}
             </span>
           </div>
-          <p className="text-sm font-medium">{description}</p>
+          <div className="space-y-0.5">
+            {items.map((item, i) => (
+              <p key={i} className="text-sm font-medium">
+                {item.quantity} {item.name}
+              </p>
+            ))}
+          </div>
           <div className="flex gap-3 text-xs text-muted-foreground">
             <span className="font-mono">{totalCalories} cal</span>
             <span className="font-mono">{totalProtein.toFixed(1)}g P</span>

@@ -2,17 +2,28 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { format } from "date-fns";
-import { Loader2, Save, UtensilsCrossed } from "lucide-react";
+import { Loader2, Plus, UtensilsCrossed, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DateHeader } from "@/components/date-header";
-import { NoteEditor } from "@/components/note-editor";
+import { SearchableSelect } from "@/components/searchable-select";
 import { TimePicker } from "@/components/time-picker";
 import { MealCard } from "@/components/meal-card";
 import { NutritionTable } from "@/components/nutrition-table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   saveFoodEntry,
+  getFoodSuggestions,
   getMealsByDate,
   deleteMeal,
+  saveCustomFood,
 } from "@/lib/actions/food-actions";
 import { getNutritionProfileWithTargets } from "@/lib/actions/nutrition-profile-actions";
 import { cn } from "@/lib/utils";
@@ -36,12 +47,23 @@ type SavedMeal = {
   }[];
 };
 
+type PendingCustomFood = {
+  name: string;
+  servingLabel: string;
+  caloriesPerServing: number;
+  proteinPerServing: number;
+  carbsPerServing: number;
+  fatPerServing: number;
+};
+
 export default function FoodPage() {
   const [date, setDate] = useState(new Date());
-  const [text, setText] = useState("");
+  const [foodName, setFoodName] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [mealTime, setMealTime] = useState(() =>
     format(new Date(), "HH:mm")
   );
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
@@ -52,9 +74,16 @@ export default function FoodPage() {
     null
   );
 
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [pendingFood, setPendingFood] = useState<PendingCustomFood | null>(
+    null
+  );
+  const [isSavingCustom, startSavingCustom] = useTransition();
+
   const dateStr = format(date, "yyyy-MM-dd");
 
   useEffect(() => {
+    getFoodSuggestions().then(setSuggestions);
     getNutritionProfileWithTargets().then((d) => {
       if (d.targets) {
         setDailyCalorieTarget(d.targets.dailyCalories);
@@ -84,11 +113,37 @@ export default function FoodPage() {
       .finally(() => setIsLoading(false));
   }, [dateStr]);
 
-  const handleSave = () => {
-    if (!text.trim()) return;
+  const canAdd = foodName.trim() && quantity.trim();
+
+  const handleAdd = () => {
+    if (!canAdd) return;
+    const currentFoodName = foodName.trim();
+    const currentQuantity = quantity.trim();
     startTransition(async () => {
-      await saveFoodEntry(text.trim(), dateStr, mealTime);
-      setText("");
+      const result = await saveFoodEntry(currentFoodName, currentQuantity, dateStr, mealTime);
+
+      const isKnownFood = suggestions.some(
+        (s) => s.toLowerCase() === currentFoodName.toLowerCase()
+      );
+      if (result.source === "ai" && !isKnownFood && result.meals.length > 0) {
+        const firstMeal = result.meals[0];
+        const firstItem = firstMeal.items[0];
+        if (firstItem) {
+          setPendingFood({
+            name: currentFoodName,
+            servingLabel: currentQuantity,
+            caloriesPerServing: firstItem.calories,
+            proteinPerServing: firstItem.protein,
+            carbsPerServing: firstItem.carbs,
+            fatPerServing: firstItem.fat,
+          });
+          setSaveDialogOpen(true);
+        }
+      }
+
+      setFoodName("");
+      setQuantity("");
+
       const fresh = await getMealsByDate(dateStr);
       setSavedMeals(
         fresh.map((m) => ({
@@ -103,6 +158,20 @@ export default function FoodPage() {
           items: m.items as SavedMeal["items"],
         }))
       );
+
+      if (result.source === "ai") {
+        getFoodSuggestions().then(setSuggestions);
+      }
+    });
+  };
+
+  const handleSaveCustomFood = () => {
+    if (!pendingFood) return;
+    startSavingCustom(async () => {
+      await saveCustomFood(pendingFood);
+      setSaveDialogOpen(false);
+      setPendingFood(null);
+      getFoodSuggestions().then(setSuggestions);
     });
   };
 
@@ -111,20 +180,6 @@ export default function FoodPage() {
       await deleteMeal(id);
       setSavedMeals((prev) => prev.filter((m) => m.id !== id));
     });
-  };
-
-  const handleEdit = (id: string) => {
-    const meal = savedMeals.find((m) => m.id === id);
-    if (!meal) return;
-
-    setText(meal.description);
-    setMealTime(meal.mealTime);
-    
-    // Delete the original so it doesn't double-save
-    handleDelete(id);
-
-    // Scroll to top where the editor is
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const mealsByLabel = savedMeals.reduce(
@@ -187,31 +242,37 @@ export default function FoodPage() {
         </div>
       ) : null}
 
-      <div className="px-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="px-4 space-y-3">
+        <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Meal time</span>
           <TimePicker value={mealTime} onChange={setMealTime} />
         </div>
 
-        <div className="rounded-xl border bg-card">
-          <NoteEditor
-            value={text}
-            onChange={setText}
-            placeholder={`Type what you ate... e.g. 2 rotis with dal`}
-          />
-        </div>
+        <SearchableSelect
+          options={suggestions}
+          value={foodName}
+          onChange={setFoodName}
+          placeholder="Search food..."
+          emptyText="No foods found — AI will estimate macros"
+        />
+
+        <Input
+          placeholder='How much? (e.g. "3 eggs", "1 bowl", "200ml")'
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+        />
 
         <Button
-          onClick={handleSave}
-          disabled={isPending || !text.trim()}
-          className="mt-3 w-full gap-2"
+          onClick={handleAdd}
+          disabled={isPending || !canAdd}
+          className="w-full gap-2"
         >
           {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Save className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
           )}
-          {isPending ? "Parsing with AI..." : "Save & Parse"}
+          {isPending ? "Adding..." : "Add Food"}
         </Button>
       </div>
 
@@ -239,7 +300,6 @@ export default function FoodPage() {
                         key={meal.id}
                         {...meal}
                         onDelete={handleDelete}
-                        onEdit={handleEdit}
                       />
                     ))}
                   </div>
@@ -266,10 +326,132 @@ export default function FoodPage() {
             No meals logged for this day
           </p>
           <p className="text-xs text-muted-foreground/70">
-            Type what you ate above and hit Save
+            Search a food, enter the quantity, then tap Add Food
           </p>
         </div>
       )}
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as custom food?</DialogTitle>
+            <DialogDescription>
+              AI estimated macros for &ldquo;{pendingFood?.name}&rdquo;. Save it
+              so next time it&apos;s instant — no AI needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          {pendingFood && (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-xs text-muted-foreground">Serving</span>
+                <Input
+                  value={pendingFood.servingLabel}
+                  onChange={(e) =>
+                    setPendingFood((p) =>
+                      p ? { ...p, servingLabel: e.target.value } : p
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Calories</span>
+                <Input
+                  type="number"
+                  value={pendingFood.caloriesPerServing}
+                  onChange={(e) =>
+                    setPendingFood((p) =>
+                      p
+                        ? {
+                            ...p,
+                            caloriesPerServing: Number(e.target.value) || 0,
+                          }
+                        : p
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">
+                  Protein (g)
+                </span>
+                <Input
+                  type="number"
+                  value={pendingFood.proteinPerServing}
+                  onChange={(e) =>
+                    setPendingFood((p) =>
+                      p
+                        ? {
+                            ...p,
+                            proteinPerServing: Number(e.target.value) || 0,
+                          }
+                        : p
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Carbs (g)</span>
+                <Input
+                  type="number"
+                  value={pendingFood.carbsPerServing}
+                  onChange={(e) =>
+                    setPendingFood((p) =>
+                      p
+                        ? {
+                            ...p,
+                            carbsPerServing: Number(e.target.value) || 0,
+                          }
+                        : p
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Fat (g)</span>
+                <Input
+                  type="number"
+                  value={pendingFood.fatPerServing}
+                  onChange={(e) =>
+                    setPendingFood((p) =>
+                      p
+                        ? {
+                            ...p,
+                            fatPerServing: Number(e.target.value) || 0,
+                          }
+                        : p
+                    )
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSaveDialogOpen(false);
+                setPendingFood(null);
+              }}
+            >
+              Skip
+            </Button>
+            <Button
+              onClick={handleSaveCustomFood}
+              disabled={isSavingCustom}
+              className="gap-2"
+            >
+              {isSavingCustom ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bookmark className="h-4 w-4" />
+              )}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

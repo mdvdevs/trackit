@@ -108,6 +108,22 @@ export const exercises = pgTable("exercises", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+/** User-created food items with known macros per serving. DB-first lookup before AI fallback. */
+export const customFoods = pgTable("custom_foods", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  normalizedName: text("normalized_name").notNull(),
+  servingLabel: text("serving_label").notNull(),
+  caloriesPerServing: real("calories_per_serving").notNull(),
+  proteinPerServing: real("protein_per_serving").notNull(),
+  carbsPerServing: real("carbs_per_serving").notNull(),
+  fatPerServing: real("fat_per_serving").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 export const meals = pgTable("meals", {
   id: uuid("id").defaultRandom().primaryKey(),
   entryId: uuid("entry_id")
